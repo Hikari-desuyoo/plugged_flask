@@ -33,7 +33,6 @@ with open('flask_app/config/access_token', 'r') as f:
 def connect(auth):
   if access_token != auth:
     return False
-  session['current_user'] = False
 
 #RUN FUNCTION
 def run(debug=True):

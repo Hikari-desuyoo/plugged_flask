@@ -6,6 +6,7 @@ import random
 import pymongo
 import re
 import inflect
+from .association_list import AssociationList
 
 class Model:
     """
@@ -29,6 +30,16 @@ class Model:
     def server_input_attributes(cls):
         """
         This method returns a dictionary of document attributes to be set
+        """
+        return {}
+
+    @classmethod
+    def associations(cls):
+        """
+        This method return a dictionary detailing associations on the model,
+        being the key an attribute name, and the value a model-like class
+        e.g.
+        {'purchases':Purchase}
         """
         return {}
 
@@ -77,6 +88,7 @@ class Model:
     def __init__(self, db_document):
         self.errors = []
         self.db_document = db_document
+        self.model_associations = self.associations()
 
     def to_dict(self):
         """
@@ -99,12 +111,25 @@ class Model:
         """
         self.db_document[key] = value
         if not save: return
-
-        self.get_collection().update({'_id': self.db_document['_id']},
+        
+        self.get_collection().update_one({'_id': self.db_document['_id']},
                    {"$set": {key: value}}) 
         
     def __getitem__(self, key):
-        return self.db_document[key]
+        value = self.db_document[key]
+        if not key in self.model_associations.keys(): return value
+
+        return AssociationList(key, value, self.model_associations[key], self)
+
+    def __eq__(self, other):
+        id_check = False
+        class_check = False
+        try:
+            id_check = self['_id'] == other['_id']
+            class_check = self.__class__ == other.__class__
+        except:
+            pass 
+        return id_check and class_check
 
     def update(self):
         """
